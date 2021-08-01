@@ -112,13 +112,12 @@ const isValidNewBlock = (newBlock: Block, previousBlock: Block) => {
 /**
  * Used to validate the input parameters of a block.
  */
-export const isValidBlockStructure = (block: Block): boolean => (
+export const isValidBlockStructure = (block: Block): boolean =>
   typeof block.index === 'number' &&
   typeof block.hash === 'string' &&
   typeof block.previousHash === 'string' &&
   typeof block.timestamp === 'number' &&
-  typeof block.data === 'string'
-);
+  typeof block.data === 'string';
 
 const isValidGenesis = (block: Block): boolean =>
   JSON.stringify(block) === JSON.stringify(genesisBlock);
