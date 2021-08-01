@@ -1,6 +1,7 @@
 import sha256 from 'crypto-js/sha256';
+import { broadcastLatest } from './communication';
 
-class Block {
+export class Block {
   // The height of the block in the blockchain
   public index: number;
   // A sha256 hash taken from the content of the block
@@ -45,8 +46,8 @@ const genesisBlock: Block = new Block(
  * This means that the data will not be persisted when the node is terminated.
  */
 let blockchain: Block[] = [genesisBlock];
-const getBlockchain = (): Block[] => blockchain;
-const getLatestBlock = (): Block => blockchain[blockchain.length - 1];
+export const getBlockchain = (): Block[] => blockchain;
+export const getLatestBlock = (): Block => blockchain[blockchain.length - 1];
 
 /**
  * The hash is calculated over all data of the block. This means that if anything in the block changes,
@@ -63,7 +64,7 @@ const calculateHash = (
 const calculateHashForBlock = (block: Block): string =>
   calculateHash(block.index, block.previousHash, block.timestamp, block.data);
 
-const generateNextBlock = (blockData: string) => {
+export const generateNextBlock = (blockData: string) => {
   const previousBlock: Block = getLatestBlock();
   const nextIndex: number = previousBlock.index + 1;
   const nextTimestamp: number = new Date().getTime() / 1000;
@@ -111,19 +112,16 @@ const isValidNewBlock = (newBlock: Block, previousBlock: Block) => {
 /**
  * Used to validate the input parameters of a block.
  */
-const isValidBlockStructure = (block: Block): boolean => {
-  return (
-    typeof block.index === 'number' &&
-    typeof block.hash === 'string' &&
-    typeof block.previousHash === 'string' &&
-    typeof block.timestamp === 'number' &&
-    typeof block.data === 'string'
-  );
-};
+export const isValidBlockStructure = (block: Block): boolean => (
+  typeof block.index === 'number' &&
+  typeof block.hash === 'string' &&
+  typeof block.previousHash === 'string' &&
+  typeof block.timestamp === 'number' &&
+  typeof block.data === 'string'
+);
 
-const isValidGenesis = (block: Block): boolean => {
-  return JSON.stringify(block) === JSON.stringify(genesisBlock);
-};
+const isValidGenesis = (block: Block): boolean =>
+  JSON.stringify(block) === JSON.stringify(genesisBlock);
 
 const isValidChain = (blockchainToValidate: Block[]): boolean => {
   if (!isValidGenesis(blockchainToValidate[0])) {
@@ -139,4 +137,26 @@ const isValidChain = (blockchainToValidate: Block[]): boolean => {
   }
 
   return true;
+};
+
+export const addBlockToChain = (newBlock: Block) => {
+  if (isValidNewBlock(newBlock, getLatestBlock())) {
+    blockchain.push(newBlock);
+    return true;
+  }
+  return false;
+};
+
+// In case of conflicts (e.g. two nodes both generate the same indexed block)
+// we choose the chain that has the longest number of blocks
+export const replaceChain = (newBlocks: Block[]) => {
+  if (isValidChain(newBlocks) && newBlocks.length > getBlockchain().length) {
+    console.log(
+      'Received blockchain is valid. Replacing current blockchain with received blockchain'
+    );
+    blockchain = newBlocks;
+    broadcastLatest();
+  } else {
+    console.log('Received blockchain invalid');
+  }
 };
